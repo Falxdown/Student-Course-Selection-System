@@ -1,0 +1,28 @@
+INSERT INTO course
+(course_code, name, teacher, category, credits, capacity, selected_count,
+ select_start_time, select_end_time, status, description)
+VALUES
+('CS101', '数据结构与算法', '陈老师', '计算机', 4.0, 60, 41,
+ DATE_SUB(NOW(), INTERVAL 1 DAY), DATE_ADD(NOW(), INTERVAL 30 DAY), 'PUBLISHED', '数组、链表、树、图与经典算法，含上机实验。'),
+('CS102', '计算机网络', '李老师', '计算机', 3.0, 80, 63,
+ DATE_SUB(NOW(), INTERVAL 1 DAY), DATE_ADD(NOW(), INTERVAL 30 DAY), 'PUBLISHED', 'TCP/IP 协议栈、路由交换与网络编程基础。'),
+('CS201', '操作系统', '王老师', '计算机', 4.0, 70, 70,
+ DATE_SUB(NOW(), INTERVAL 1 DAY), DATE_ADD(NOW(), INTERVAL 30 DAY), 'PUBLISHED', '进程、内存、文件系统与并发编程。'),
+('CS202', '数据库系统原理', '赵老师', '计算机', 3.0, 90, 72,
+ DATE_SUB(NOW(), INTERVAL 1 DAY), DATE_ADD(NOW(), INTERVAL 30 DAY), 'PUBLISHED', '关系模型、SQL、事务、索引与查询优化。'),
+('CS301', '分布式系统', '周老师', '计算机', 3.0, 50, 50,
+ DATE_SUB(NOW(), INTERVAL 1 DAY), DATE_ADD(NOW(), INTERVAL 30 DAY), 'PUBLISHED', '一致性、复制、共识算法与分布式事务。'),
+('AI101', '人工智能导论', '吴老师', '人工智能', 3.0, 120, 98,
+ DATE_SUB(NOW(), INTERVAL 1 DAY), DATE_ADD(NOW(), INTERVAL 30 DAY), 'PUBLISHED', '搜索、知识表示、机器学习与智能体入门。'),
+('AI201', '机器学习', '郑老师', '人工智能', 4.0, 80, 80,
+ DATE_SUB(NOW(), INTERVAL 1 DAY), DATE_ADD(NOW(), INTERVAL 30 DAY), 'PUBLISHED', '监督学习、无监督学习、模型评估与特征工程。'),
+('MA101', '高等数学（上）', '孙老师', '数学', 5.0, 150, 120,
+ DATE_SUB(NOW(), INTERVAL 1 DAY), DATE_ADD(NOW(), INTERVAL 30 DAY), 'PUBLISHED', '极限、导数、积分与多元函数微积分。'),
+('MA201', '线性代数', '马老师', '数学', 3.0, 140, 88,
+ DATE_SUB(NOW(), INTERVAL 1 DAY), DATE_ADD(NOW(), INTERVAL 30 DAY), 'PUBLISHED', '矩阵、线性方程组、特征值与二次型。'),
+('EN101', '学术英语写作', '林老师', '外语', 2.0, 45, 32,
+ DATE_SUB(NOW(), INTERVAL 1 DAY), DATE_ADD(NOW(), INTERVAL 30 DAY), 'PUBLISHED', '学术论文结构、文献引用与英文表达训练。'),
+('EC101', '经济学原理', '何老师', '经管', 3.0, 100, 55,
+ DATE_SUB(NOW(), INTERVAL 1 DAY), DATE_ADD(NOW(), INTERVAL 30 DAY), 'PUBLISHED', '微观与宏观经济学的基本概念和分析方法。'),
+('AR101', '设计思维与创新', '高老师', '通识', 2.0, 60, 36,
+ DATE_SUB(NOW(), INTERVAL 1 DAY), DATE_ADD(NOW(), INTERVAL 30 DAY), 'PUBLISHED', '以用户为中心的创新方法、原型设计与团队协作。');

@@ -1,0 +1,8 @@
+target
+logs
+.git
+.idea
+.vscode
+deploy/certs/*.pem
+deploy/certs/*.key
+*.md

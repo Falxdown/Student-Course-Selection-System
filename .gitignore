@@ -1,0 +1,11 @@
+target/
+logs/
+.runtime/
+.idea/
+*.iml
+.vscode/
+.DS_Store
+.env
+deploy/certs/*.pem
+deploy/certs/*.key
+deploy/certs/*.crt

@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="校园课程抢选系统演示台">
+    <title>拾课 · 校园课程抢选</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%23102a43'/><text x='32' y='43' font-size='34' text-anchor='middle' fill='%23f4d58d' font-family='serif'>拾</text></svg>">
+    <link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+<div class="grain"></div>
+
+<header class="topbar" id="topbar" hidden>
+    <a class="brand" href="#" onclick="App.goHome(); return false;">
+        <span class="brand-mark">拾</span>
+        <span class="brand-text"><strong>拾课</strong><small>CAMPUS SELECT</small></span>
+    </a>
+    <nav class="topnav">
+        <button class="nav-btn active" data-nav="courses" onclick="App.switchView('courses')">选课大厅</button>
+        <button class="nav-btn" data-nav="orders" onclick="App.switchView('orders')">我的课表</button>
+        <button class="nav-btn admin-only" data-nav="admin" hidden onclick="App.switchView('admin')">管理台</button>
+    </nav>
+    <div class="user-area">
+        <span class="user-chip"><span class="dot"></span><span id="userName">—</span><small id="userRole"></small></span>
+        <button class="text-btn" onclick="App.logout()">退出</button>
+    </div>
+</header>
+
+<main>
+    <section class="login-shell" id="loginView">
+        <div class="login-hero">
+            <div class="eyebrow"><span></span> 2026 秋季学期 · 第二轮选课</div>
+            <h1>把想上的课，<br><em>稳稳选到手。</em></h1>
+            <p class="hero-copy">Redis 原子预扣库存、RabbitMQ 异步落单、令牌桶限流。<br>高并发之下，每一个名额都有迹可循。</p>
+            <div class="hero-stats">
+                <div><strong>0</strong><span>超卖</span></div>
+                <div><strong>2000</strong><span>目标 QPS</span></div>
+                <div><strong>180ms</strong><span>目标 P95</span></div>
+            </div>
+            <div class="hero-note">真实并发数据请以本机压测为准</div>
+        </div>
+
+        <div class="login-card">
+            <div class="card-kicker">WELCOME BACK</div>
+            <h2>登录选课系统</h2>
+            <p class="muted">使用学号与密码进入选课大厅</p>
+            <form id="loginForm" autocomplete="on">
+                <label class="field">
+                    <span>学号 / 工号</span>
+                    <input id="studentNo" name="studentNo" type="text" placeholder="例如 20260001" maxlength="32" required autocomplete="username">
+                </label>
+                <label class="field">
+                    <span>密码</span>
+                    <input id="password" name="password" type="password" placeholder="请输入密码" maxlength="64" required autocomplete="current-password">
+                </label>
+                <button class="primary-btn" id="loginBtn" type="submit">进入选课大厅 <span>→</span></button>
+            </form>
+            <div class="demo-accounts">
+                <span class="muted">演示账号</span>
+                <button type="button" onclick="App.fillLogin('20260001','Student@123')">学生 20260001 / Student@123</button>
+                <button type="button" onclick="App.fillLogin('admin','Admin@123')">管理员 admin / Admin@123</button>
+            </div>
+            <p class="login-error" id="loginError" hidden></p>
+        </div>
+    </section>
+
+    <section class="workspace" id="workspace" hidden>
+        <div class="page-head">
+            <div>
+                <div class="eyebrow"><span></span> <span id="pageEyebrow">COURSE MARKET</span></div>
+                <h1 id="pageTitle">选课大厅</h1>
+                <p id="pageSubtitle">名额实时同步，选中后可在「我的课表」查看订单。</p>
+            </div>
+            <div class="head-actions">
+                <button class="ghost-btn" onclick="App.refreshCurrent()">↻ 刷新</button>
+                <a class="ghost-btn" href="/swagger-ui.html" target="_blank" rel="noopener">API 文档 ↗</a>
+            </div>
+        </div>
+
+        <section id="coursesView">
+            <div class="summary-strip">
+                <div class="summary-item"><span>可选课程</span><strong id="courseCount">—</strong></div>
+                <div class="summary-item"><span>我的有效订单</span><strong id="orderCount">—</strong></div>
+                <div class="summary-item"><span>当前选课状态</span><strong class="status-live"><i></i>进行中</strong></div>
+                <div class="summary-tip">提示：每个名额先在 Redis 原子预扣，再由消息队列异步生成订单。</div>
+            </div>
+
+            <div class="toolbar">
+                <label class="search-box">
+                    <span>⌕</span>
+                    <input id="keyword" type="search" placeholder="搜索课程名 / 教师 / 课程编号" onkeydown="if(event.key==='Enter') App.loadCourses()">
+                </label>
+                <select id="category" onchange="App.loadCourses()">
+                    <option value="">全部类别</option>
+                    <option>计算机</option>
+                    <option>人工智能</option>
+                    <option>数学</option>
+                    <option>外语</option>
+                    <option>经管</option>
+                    <option>通识</option>
+                </select>
+                <select id="sort" onchange="App.loadCourses()">
+                    <option value="hot">按热度</option>
+                    <option value="new">按开课时间</option>
+                </select>
+                <button class="primary-btn small" onclick="App.loadCourses()">搜索</button>
+            </div>
+
+            <div class="course-grid" id="courseGrid">
+                <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
+            </div>
+            <div class="empty" id="courseEmpty" hidden>没有找到符合条件的课程，换个关键词试试。</div>
+        </section>
+
+        <section id="ordersView" hidden>
+            <div class="orders-layout">
+                <div class="orders-panel">
+                    <div class="panel-head">
+                        <h2>我的选课订单</h2>
+                        <div class="segmented" id="orderFilter">
+                            <button class="active" onclick="App.loadOrders('')">全部</button>
+                            <button onclick="App.loadOrders('CONFIRMED')">已选中</button>
+                            <button onclick="App.loadOrders('CANCELLED')">已取消</button>
+                        </div>
+                    </div>
+                    <div id="orderList" class="order-list"></div>
+                    <div class="empty" id="orderEmpty" hidden>还没有选课记录，去选课大厅逛逛吧。</div>
+                </div>
+                <aside class="policy-card">
+                    <div class="card-kicker">NOTES</div>
+                    <h3>选课须知</h3>
+                    <ol>
+                        <li>抢选请求为异步受理，通常 1 秒内完成落单。</li>
+                        <li>同一课程重复提交会被幂等键与唯一索引拦截。</li>
+                        <li>取消选课后名额会实时归还，可选课时间内重新选择。</li>
+                        <li>订单号是查询与售后处理的唯一凭证。</li>
+                    </ol>
+                    <div class="policy-foot">遇到异常？保留页面上的 requestId 与订单号。</div>
+                </aside>
+            </div>
+        </section>
+
+        <section id="adminView" hidden>
+            <div class="admin-stats" id="adminStats"></div>
+            <div class="admin-grid">
+                <div class="admin-card">
+                    <div class="panel-head"><h2>新建课程</h2><span class="pill">ADMIN</span></div>
+                    <form id="courseForm" class="course-form">
+                        <label class="field"><span>课程编号</span><input name="courseCode" maxlength="32" placeholder="CS401" required></label>
+                        <label class="field"><span>课程名称</span><input name="name" maxlength="128" placeholder="云原生架构" required></label>
+                        <label class="field"><span>授课教师</span><input name="teacher" maxlength="64" placeholder="张老师" required></label>
+                        <label class="field"><span>课程类别</span><input name="category" maxlength="32" placeholder="计算机" required></label>
+                        <label class="field"><span>学分</span><input name="credits" type="number" min="0.5" max="20" step="0.5" value="3" required></label>
+                        <label class="field"><span>容量</span><input name="capacity" type="number" min="1" max="10000" value="60" required></label>
+                        <label class="field"><span>选课开始</span><input name="selectStartTime" type="datetime-local" required></label>
+                        <label class="field"><span>选课结束</span><input name="selectEndTime" type="datetime-local" required></label>
+                        <label class="field"><span>状态</span>
+                            <select name="status"><option value="PUBLISHED">立即发布</option><option value="DRAFT">保存草稿</option></select>
+                        </label>
+                        <label class="field wide"><span>课程简介</span><input name="description" maxlength="500" placeholder="一句话介绍这门课"></label>
+                        <button class="primary-btn" type="submit">创建课程</button>
+                    </form>
+                </div>
+                <aside class="policy-card">
+                    <div class="card-kicker">OPERATIONS</div>
+                    <h3>运营提示</h3>
+                    <p class="muted">新建课程默认同步 Redis 名额；容量修改不能低于当前已选人数。</p>
+                    <ul class="plain-list">
+                        <li>课程状态：DRAFT → PUBLISHED → CLOSED</li>
+                        <li>统计接口：<code>/api/v1/admin/selections/statistics</code></li>
+                        <li>课程编辑：<code>PUT /api/v1/admin/courses/{id}</code></li>
+                    </ul>
+                    <button class="ghost-btn full" onclick="App.loadAdminStats()">刷新运营统计</button>
+                </aside>
+            </div>
+        </section>
+    </section>
+</main>
+
+<div class="toast-stack" id="toastStack"></div>
+
+<div class="modal" id="confirmModal" hidden>
+    <div class="modal-card">
+        <div class="modal-icon">!</div>
+        <h3 id="modalTitle">确认操作</h3>
+        <p id="modalText"></p>
+        <div class="modal-actions">
+            <button class="ghost-btn" onclick="App.closeModal()">再想想</button>
+            <button class="danger-btn" id="modalConfirm">确认</button>
+        </div>
+    </div>
+</div>
+
+<script src="/assets/app.js"></script>
+</body>
+</html>

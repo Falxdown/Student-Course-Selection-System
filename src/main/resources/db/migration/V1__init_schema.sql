@@ -1,0 +1,81 @@
+CREATE TABLE IF NOT EXISTS student (
+    id              BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
+    student_no      VARCHAR(32)  NOT NULL COMMENT '学号/工号',
+    password_hash   VARCHAR(100) NOT NULL COMMENT 'BCrypt 密码哈希',
+    name            VARCHAR(64)  NOT NULL COMMENT '姓名',
+    role            VARCHAR(20)  NOT NULL DEFAULT 'STUDENT' COMMENT 'STUDENT/ADMIN',
+    status          VARCHAR(20)  NOT NULL DEFAULT 'ACTIVE' COMMENT 'ACTIVE/DISABLED',
+    last_login_at   DATETIME     NULL COMMENT '最近登录时间',
+    created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_student_no (student_no)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '学生/管理员账号';
+
+CREATE TABLE IF NOT EXISTS course (
+    id                BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
+    course_code       VARCHAR(32)  NOT NULL COMMENT '课程编号',
+    name              VARCHAR(128) NOT NULL COMMENT '课程名称',
+    teacher           VARCHAR(64)  NOT NULL COMMENT '授课教师',
+    category          VARCHAR(32)  NOT NULL COMMENT '课程类别',
+    credits           DECIMAL(4, 1) NOT NULL DEFAULT 2.0 COMMENT '学分',
+    capacity          INT          NOT NULL COMMENT '容量',
+    selected_count    INT          NOT NULL DEFAULT 0 COMMENT '已选人数',
+    select_start_time DATETIME     NOT NULL COMMENT '选课开始时间',
+    select_end_time   DATETIME     NOT NULL COMMENT '选课结束时间',
+    status            VARCHAR(20)  NOT NULL DEFAULT 'DRAFT' COMMENT 'DRAFT/PUBLISHED/CLOSED',
+    description       VARCHAR(500) NULL COMMENT '课程简介',
+    version           INT          NOT NULL DEFAULT 0 COMMENT '乐观锁版本',
+    created_at        DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at        DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_course_code (course_code),
+    KEY idx_course_status_start (status, select_start_time, select_end_time),
+    KEY idx_course_status_hot (status, selected_count),
+    KEY idx_course_category_status (category, status),
+    CONSTRAINT ck_course_capacity CHECK (capacity > 0),
+    CONSTRAINT ck_course_selected CHECK (selected_count >= 0 AND selected_count <= capacity)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '课程';
+
+CREATE TABLE IF NOT EXISTS selection_order (
+    id          BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
+    order_no    VARCHAR(40)  NOT NULL COMMENT '业务订单号',
+    request_id  VARCHAR(40)  NOT NULL COMMENT '抢选请求 ID',
+    student_id  BIGINT       NOT NULL COMMENT '学生 ID',
+    course_id   BIGINT       NOT NULL COMMENT '课程 ID',
+    course_code VARCHAR(32)  NOT NULL COMMENT '课程编号快照',
+    course_name VARCHAR(128) NOT NULL COMMENT '课程名称快照',
+    status      VARCHAR(20)  NOT NULL COMMENT 'CONFIRMED/CANCELLED',
+    active      TINYINT      NOT NULL DEFAULT 1 COMMENT '1 有效，0 已取消；参与唯一索引',
+    cancelled_at DATETIME    NULL COMMENT '取消时间',
+    created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_order_no (order_no),
+    UNIQUE KEY uk_order_request_id (request_id),
+    UNIQUE KEY uk_order_student_course_active (student_id, course_id, active),
+    KEY idx_order_student_status_created (student_id, status, created_at),
+    KEY idx_order_course_status (course_id, status),
+    CONSTRAINT fk_order_student FOREIGN KEY (student_id) REFERENCES student (id),
+    CONSTRAINT fk_order_course FOREIGN KEY (course_id) REFERENCES course (id)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '选课订单';
+
+CREATE TABLE IF NOT EXISTS selection_task (
+    id              BIGINT       NOT NULL AUTO_INCREMENT COMMENT '主键',
+    request_id      VARCHAR(40)  NOT NULL COMMENT '幂等请求 ID',
+    idempotency_key VARCHAR(64)  NOT NULL COMMENT '客户端幂等键',
+    student_id      BIGINT       NOT NULL COMMENT '学生 ID',
+    course_id       BIGINT       NOT NULL COMMENT '课程 ID',
+    status          VARCHAR(20)  NOT NULL COMMENT 'PENDING/PROCESSING/SUCCESS/FAILED',
+    order_no        VARCHAR(40)  NULL COMMENT '成功后的订单号',
+    fail_reason     VARCHAR(300) NULL COMMENT '失败原因',
+    created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_task_request_id (request_id),
+    UNIQUE KEY uk_task_student_idem (student_id, idempotency_key),
+    KEY idx_task_student_course_status (student_id, course_id, status),
+    KEY idx_task_status_updated (status, updated_at),
+    CONSTRAINT fk_task_student FOREIGN KEY (student_id) REFERENCES student (id),
+    CONSTRAINT fk_task_course FOREIGN KEY (course_id) REFERENCES course (id)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '抢选异步任务';
